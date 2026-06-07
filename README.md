@@ -1,279 +1,101 @@
-# Practice — Building an Architecture Reasoning Agent
+# Architecture Reasoning Agent Workshop: Engine Internals (Render-Backend Abstraction + ECS)
 
-In this practice you will build agents from scratch: an engineering team lead chatbot, an architecture reasoning orchestrator, and an RFC writer subagent. The tools and data are provided — your job is to write the agent instructions.
+Build three AI agents that reason about a real C++ game engine: a team-lead chatbot, an architecture-reasoning orchestrator, and an RFC-writer sub-agent. You give them the studio context, the existing ADRs, and the real engine source; they turn a feature request into evaluated options, a target diagram, a new ADR, and an RFC.
 
-The target codebase is the **Conduit RealWorld** app (`conduit-realworld-example-app/`), a Medium-clone with a Node.js/Express backend, Sequelize + PostgreSQL, and a React/Vite frontend.
+This is the engine-internals adaptation (render-backend abstraction plus ECS) of the original, language-agnostic workshop. The reference codebase is the open-source Oxygine engine, pinned as a git submodule, so the agents reason about code that actually exists.
 
-Three team lead personas are provided — each requests a different feature. Pick one to start:
+## Sources
 
-| Persona | Directory | Feature requested |
-|---------|-----------|-------------------|
-| **Alex Chen** | `team-lead/` | Real-time collaborative article editing (WebSockets + OT) |
-| **Marcus Webb** | `team-lead-2/` | AI-powered personalized article feed (recommendation engine) |
-| **Priya Sharma** | `team-lead-3/` | Premium subscription paywall + writer revenue share (Stripe) |
+- Original workshop (upstream, language-agnostic): https://github.com/nebius-academy-templates/agent-arch-reasoning-practice
+- This fork: https://github.com/mrtoxfox/agent-arch-reasoning-practice
+- This scenario lives on the branch `engine-render-abstraction-ecs`.
+- Reference engine (the code under analysis): Oxygine, https://github.com/oxygine/oxygine-framework, pinned at commit `1e9f923`, MIT licensed.
 
----
+What changed from the original: the Conduit Node.js sample app was removed; the company context, the three ADRs, the current-architecture diagram, and the three team-lead personas were rewritten for a C++ engine studio; and Oxygine was vendored as the real codebase. See `scenario-3-adaptation-summary.md` for the full inventory and the facilitator timings.
+
+## The scenario in one paragraph
+
+Northwind Studios ships a live C++ game on its in-house engine (Oxygine). Entities use a deep `Actor` inheritance tree, rendering is GLES-only behind a half-built `IVideoDriver` seam, and the renderer runs immediate-mode on a single thread. Three leads each want a different modernization: Sofia (ECS migration), Tariq (a real render-backend abstraction), Yuki (a multithreaded renderer). ADR-003 is the trap: do not thread before the abstraction exists, and do not refactor the entity model and the renderer in the same change.
 
 ## Repository layout
 
 ```
-arch-reasoning-agent-practice/
-├── conduit-realworld-example-app/         ← the real codebase under analysis
-│   ├── backend/                           ← Express + Sequelize + PostgreSQL
-│   └── frontend/                          ← React + Vite SPA
-│
+agent-arch-reasoning-practice/
+├── engine/                         <- reference codebase (git submodule: Oxygine)
+│   └── oxygine/src/                <- C++ engine source: Actor/Sprite tree + renderer
 ├── data/
-│   ├── context/company.md             ← Conduit platform: business context, pain points, constraints
-│   ├── adrs/
-│   │   ├── ADR-001-database.md        ← minimal ADR (intentionally thin)
-│   │   ├── ADR-002-api-design.md      ← well-structured ADR
-│   │   └── ADR-003-deployment.md      ← outdated monolith ADR
-│   └── diagrams/
-│       └── current-architecture.mmd   ← current single-VPS topology (Mermaid)
-│
-├── skills/                            ← COMPLETE — do not modify
-│   ├── list_adrs/list_adrs.py         ← lists all ADRs as JSON
-│   ├── read_adr/read_adr.py           ← reads one ADR by ID
-│   ├── write_adr/write_adr.py         ← validates + saves new ADR to output/adrs/
-│   └── save_diagram/save_diagram.py   ← validates + saves Mermaid to output/diagrams/
-│
-├── output/
-│   ├── adrs/                          ← agent writes new ADRs here
-│   └── diagrams/                      ← agent writes new diagrams here
-│
-├── team-lead/
-│   └── CLAUDE.md.template             ← Alex Chen: real-time collaboration
-├── team-lead-2/
-│   └── CLAUDE.md.template             ← Marcus Webb: AI personalized feed
-├── team-lead-3/
-│   └── CLAUDE.md.template             ← Priya Sharma: premium subscriptions
-│
-├── .claude/agents/
-│   ├── team_lead.md.template          ← Alex Chen subagent (used by main agent)
-│   ├── team_lead_2.md.template        ← Marcus Webb subagent (used by main agent)
-│   ├── team_lead_3.md.template        ← Priya Sharma subagent (used by main agent)
-│   └── rfc_writer.md.template         ← Step 4: build the RFC writer subagent
-│
-├── CLAUDE.md.template                 ← Step 3: build the architecture reasoning agent
-└── README.md
+│   ├── context/company.md          <- Northwind Studios: context, pains, constraints
+│   ├── adrs/                       <- ADR-001 entity model, ADR-002 rendering API, ADR-003 render threading
+│   └── diagrams/current-architecture.mmd (+ .md copy)
+├── skills/                         <- 4 Python skills (list/read/write ADR, save diagram); complete, do not modify
+├── output/                         <- agents write generated ADRs, diagrams, and the RFC here
+├── team-lead/  team-lead-2/  team-lead-3/   <- the three persona CLAUDE.md templates
+├── .claude/agents/                 <- subagent templates (team_lead*, rfc_writer)
+├── CLAUDE.md.template              <- the architecture agent you build
+└── scenario-3-adaptation-summary.md
 ```
 
----
+## Setup
 
-## Step 0 — Setup
+### Prerequisites
+- Git (with submodule support)
+- Python 3.8 or newer
+- Claude Code (recommended) or Cursor
 
-Verify the skills work:
-
+### macOS
 ```bash
-python skills/list_adrs/list_adrs.py
-python skills/read_adr/read_adr.py ADR-001
+# 1. Install prerequisites (Homebrew)
+brew install git python
+
+# 2. Clone with the engine submodule
+git clone --recurse-submodules https://github.com/mrtoxfox/agent-arch-reasoning-practice.git
+cd agent-arch-reasoning-practice
+git checkout engine-render-abstraction-ecs
+
+# If you already cloned without --recurse-submodules:
+git submodule update --init
+
+# 3. Smoke-test the skills
+python3 skills/list_adrs/list_adrs.py
+python3 skills/read_adr/read_adr.py ADR-001
 ```
 
-Read `data/context/company.md` to understand the scenario, then browse `conduit-realworld-example-app/backend/` to see the actual code the agent will reason about.
+### Windows
+Use Git Bash (ships with Git for Windows) or PowerShell. Install Python from python.org and tick "Add python.exe to PATH".
+```powershell
+# 1. Clone with the engine submodule
+git clone --recurse-submodules https://github.com/mrtoxfox/agent-arch-reasoning-practice.git
+cd agent-arch-reasoning-practice
+git checkout engine-render-abstraction-ecs
 
----
+# If you already cloned without --recurse-submodules:
+git submodule update --init
 
-## Step 1 — Build a Team Lead chatbot
-
-Three personas are available. Pick one (or build all three for extra practice).
-
-| Persona | Feature | Templates to copy |
-|---------|---------|-------------------|
-| Alex Chen | Real-time collab editing | `team-lead/CLAUDE.md.template` → `team-lead/CLAUDE.md`<br>`.claude/agents/team_lead.md.template` → `.claude/agents/team_lead.md` |
-| Marcus Webb | AI personalized feed | `team-lead-2/CLAUDE.md.template` → `team-lead-2/CLAUDE.md`<br>`.claude/agents/team_lead_2.md.template` → `.claude/agents/team_lead_2.md` |
-| Priya Sharma | Premium subscriptions | `team-lead-3/CLAUDE.md.template` → `team-lead-3/CLAUDE.md`<br>`.claude/agents/team_lead_3.md.template` → `.claude/agents/team_lead_3.md` |
-
-Each persona already has content filled in — the templates are complete, not blank. Read them, then optionally customise before running.
-
-Test the standalone chatbot for your chosen persona:
-
-```bash
-cd team-lead        # or team-lead-2 / team-lead-3
-claude
+# 2. Smoke-test the skills (use `py`, or `python` if that is your launcher)
+py skills\list_adrs\list_adrs.py
+py skills\read_adr\read_adr.py ADR-001
 ```
+In Git Bash on Windows, forward slashes and `python3` also work. The submodule checkout is about 173 MB, so do it before a session, not live.
 
-**Good opening questions by persona:**
-- Alex: *"What exactly should two writers be able to do at the same time?"*
-- Marcus: *"What data do you have today that a recommendation engine could use?"*
-- Priya: *"What happens if we charge a reader and the server crashes before we record it?"*
+## Running the workshop
 
-The team lead should answer in product/delivery language and push back when proposals sound complex or slow to ship.
+1. Team lead. Pick a persona, copy its template to `CLAUDE.md`, and interview it:
+   ```bash
+   cp team-lead/CLAUDE.md.template team-lead/CLAUDE.md   # Sofia (ECS); or team-lead-2 (Tariq), team-lead-3 (Yuki)
+   cd team-lead && claude
+   ```
+   Turn the conversation into a `requirements.md`.
+2. Architecture agent. Copy `CLAUDE.md.template` to `CLAUDE.md`, fill the `[TODO]`s (keep both guardrail gates), then run `claude` and send `analyse the architecture`. It reads `company.md`, the three ADRs, the diagram, and the real engine source, proposes options, and waits.
+3. Target diagram. After you select an option, it writes a Mermaid target diagram to `output/diagrams/`.
+4. ADR. Say `write adr` and it saves ADR-004 via the `write_adr` skill.
+5. RFC. It hands off to the `rfc_writer` sub-agent to assemble `output/rfc.md`.
 
----
+Keep the engine scan small: point the agent at `engine/oxygine/src/oxygine/actor/` and the renderer (`STDRenderer`, `core/gl/`), not the whole engine.
 
-## Step 2 — Read and analyse the existing ADRs
+## Mermaid diagrams (optional)
 
-Before building the agent, spend 10 minutes reading the three ADRs in `data/adrs/` manually.
+The agent can write Mermaid into a `.md` file directly, no extra setup. For live previews, install the `claude-mermaid` plugin from the Claude Code marketplace, then restart Claude Code.
 
-- What was decided and when?
-- Which ADR explicitly flags that real-time features need a different transport layer?
-- What does ADR-003 warn about for multi-process WebSocket deployments?
+## Credits and license
 
-This shapes the requirements section of your agent.
-
----
-
-## Step 3 — Build the Architecture Reasoning Agent
-
-This is the main agent. It reads ADRs, identifies gaps, proposes options, generates diagrams, and writes new ADRs.
-
-1. Copy the template:
-
-```bash
-cp CLAUDE.md.template CLAUDE.md
-```
-
-2. Fill in every `[TODO]`. Required sections:
-
-| Section | What to write |
-|---|---|
-| **Your role** | One-sentence identity |
-| **Purpose** | Full scope: what the agent reads, analyses, produces |
-| **Trigger** | Exact phrases that start the workflow |
-| **Workflow** | ≥ 10 numbered steps (see hints in template) |
-| **Output format** | Gap analysis table + option structure with costs/risks/timelines |
-| **Guardrails** | Must include the ADR write gate and diagram gate |
-| **Failure handling** | What to do when each tool or subagent fails |
-
-### Required guardrails
-
-Your `CLAUDE.md` **must** include both of these rules:
-
-> `write_adr` must **not** be called unless the user's message contains **"write adr"**, **"save adr"**, or **"publish"**.
-
-> `save_diagram` must **not** be called before the user has selected a specific option.
-
-3. Run the agent:
-
-```bash
-claude          # from the arch-reasoning-agent-practice/ directory
-```
-
-Send: `analyse the architecture`
-
-Confirm it:
-- Reads `company.md` and all 3 ADRs
-- Identifies at least 3 architectural gaps related to the real-time collaboration feature
-- Proposes 2–3 options with cost estimates and timelines
-- **Waits** — does not call `write_adr` or `save_diagram` yet
-
-4. Drive it through the full flow:
-   - Select an option → diagram should be saved to `output/diagrams/`
-   - Say `write adr` → ADR should be saved to `output/adrs/`
-
----
-
-## Step 4 — Add the RFC writer subagent
-
-After the agent writes an ADR, it should produce a complete RFC document that combines everything: requirements, architecture, ADRs, diagram, and migration plan.
-
-1. Copy the template:
-
-```bash
-cp .claude/agents/rfc_writer.md.template .claude/agents/rfc_writer.md
-```
-
-2. Fill in every `[TODO]`:
-
-| Section | What to write |
-|---|---|
-| **Your role** | One-sentence identity |
-| **Purpose** | What document it produces and who reads it |
-| **RFC sections** | Ordered list of ≥ 8 sections the RFC must contain |
-| **Output format** | How each section is structured |
-| **Guardrails** | What the RFC writer must never do |
-
-3. Update your `CLAUDE.md` to invoke `rfc_writer` after the ADR is written. The subagent receives:
-   - Full company context
-   - All ADR content (existing + new)
-   - The selected architecture option
-   - Diagram path in `output/diagrams/`
-   - Requirements summary from the team lead session
-
-4. Re-run the full workflow and verify `output/rfc.md` is created.
-
----
-
-## Setting up the Mermaid diagram plugin
-
-The architecture agent can render and live-preview Mermaid diagrams in your browser using the **claude-mermaid** Claude Code plugin. This is optional but recommended — without it the agent can still write `.mmd` files, but you won't get live previews.
-
-The plugin is hosted on GitHub and must be registered as a custom marketplace source before installation.
-
-### 1. Register the marketplace source
-
-Add the following to your **user-level** Claude Code settings (`~/.claude/settings.json`). Create the file if it doesn't exist; merge with your existing config if it does.
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "claude-mermaid": {
-      "source": {
-        "source": "github",
-        "repo": "veelenga/claude-mermaid"
-      }
-    }
-  }
-}
-```
-
-### 2. Install the plugin
-
-Open Claude Code (any project) and run:
-
-```
-/plugin install claude-mermaid
-```
-
-Claude Code will download the plugin from the GitHub repo and cache it locally. You will see a confirmation message when it is ready.
-
-### 3. Enable the plugin
-
-The install command enables the plugin automatically. You can verify it is active by checking that your `~/.claude/settings.json` now contains:
-
-```json
-"enabledPlugins": {
-  "claude-mermaid@claude-mermaid": true
-}
-```
-
-### 4. Verify it works
-
-From this project's root directory, open Claude Code and ask:
-
-```
-draw a simple mermaid flowchart with three boxes
-```
-
-A browser tab should open with a live-preview of the diagram. The tab auto-refreshes whenever the diagram is updated.
-
-### Permissions
-
-The `.claude/settings.json` in this repo already pre-approves the two mermaid tool calls (`mermaid_preview` and `mermaid_save`) so you will not be prompted to allow them during the exercise.
-
----
-
-## Submission checklist
-
-- [ ] At least one team lead `CLAUDE.md` exists in `team-lead/`, `team-lead-2/`, or `team-lead-3/`
-- [ ] Matching `.claude/agents/team_lead*.md` file exists for your chosen persona
-- [ ] Team lead chatbot responds in delivery/product language (test: propose something complex — they should push back on scope or timeline)
-- [ ] `CLAUDE.md` exists — no `[TODO]` tokens remain
-- [ ] ADR write gate present in `CLAUDE.md`
-- [ ] Diagram gate present in `CLAUDE.md`
-- [ ] Agent reads all 3 ADRs before proposing options
-- [ ] Agent presents 2–3 options and **waits** before writing anything
-- [ ] `output/diagrams/` contains a generated diagram
-- [ ] `output/adrs/` contains a generated ADR
-- [ ] `.claude/agents/rfc_writer.md` exists — no `[TODO]` tokens remain
-- [ ] `output/rfc.md` exists after full workflow run
-
----
-
-## Tips
-
-- Read `data/context/company.md` carefully — your agent's gap analysis should map directly to the pain points described there, especially the single-VPS constraint that affects WebSocket scaling.
-- Browse `conduit-realworld-example-app/backend/` — the agent should be able to reason about what the real code actually does, not just the company doc.
-- The write gate is the most important guardrail. Test that the agent does **not** call `write_adr` when you say "looks good" or "I approve".
-- If the agent skips a step, add more explicit ordering language to the workflow section ("do not proceed to step N until step N-1 is complete").
-- For Cursor or Windsurf: use the same template content, saved to `.cursor/rules/architecture-agent.mdc` or `.windsurfrules` respectively. For the Team Lead, open `team-lead/` as a separate workspace root.
+Workshop structure and the Python skills come from the upstream original (nebius-academy-templates). The reference engine is Oxygine (MIT). This fork adapts the workshop to engine internals.

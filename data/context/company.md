@@ -1,64 +1,67 @@
-# Conduit — Company Context
+# Northwind Studios: Company Context
 
 ## What We Do
-Conduit is an open publishing platform where writers create and share articles,
-readers follow authors and curate feeds, and community members discuss ideas through comments.
-Think of it as a lean, indie version of Medium.
-Founded in 2022, single-region deployment, growing steadily.
+Northwind Studios builds stylized action games on our own C++ engine, kept in-house
+since 2019. We shipped one title, run it as a live game with monthly content, and have
+a second title greenlit on the same engine.
+Think of us as a small studio that owns its tech instead of licensing Unity or Unreal.
+Founded in 2019, PC-first, now being pushed toward console and mobile.
 
 ## Current Numbers
-- 14,000 registered users
-- 2,600 articles published per month
-- 52,000 monthly active readers
-- 480 comments per day
-- Average session length: 6 min
-- 70% of traffic is unauthenticated (SEO / read-only)
+- 1 shipped title, ~180,000 owners, live for 14 months
+- ~9,000 daily active players, peaks near 22,000 on patch days
+- "Very Positive" store rating (88%)
+- Monthly content patch cadence; the live title never stops shipping
+- Frame budget on target hardware: 60 fps (16.6 ms/frame), and headroom is thin
 
-## Growth Trajectory
-- Month-over-month registered-user growth: 18%
-- Article output growing 22% MoM since the writer program launched
-- Planning to introduce a premium tier (paid subscriptions for authors) in Q3
+## Roadmap
+- Second title is greenlit and shares the engine
+- Publisher wants the live title on console and mobile within ~12 months
+- The engine team cannot pause live-ops to do it
 
 ## Current Technology Stack
-- Backend: Node.js monolith (Express.js + Sequelize ORM)
-- Database: Single PostgreSQL 15 instance (models: User, Article, Comment, Tag)
-- Frontend: React + Vite SPA, served via the same VPS
-- Auth: JWT (stateless, no refresh tokens yet)
-- Hosting: Single VPS — €120/month
-- No dedicated CDN, no cache layer, no message queue
+- Engine: in-house C++17 engine ("Oxygine"), maintained since 2019
+- Entities: OOP inheritance on the engine's `Actor` base class, deep subclass trees (`Actor` → `VStyleActor` → `Sprite`), with our `Player` / `Enemy` / `Pickup` types layered on top
+- Rendering: OpenGL ES only, behind a single-backend `IVideoDriver` interface (`VideoDriverGLES20`); `STDRenderer` submits draw calls immediate-mode
+- Threading: a single update/render thread, immediate-mode draw submission
+- Assets: loaded synchronously at scene start
+- Build: CMake, full rebuild ~22 min, incremental link ~90 s
 
 ## Engineering Team
-- 2 backend developers (Node.js, some Python)
-- 1 frontend developer (React)
-- 1 DevOps / part-time infra engineer
-- No dedicated SRE or data engineering
+- 3 engine engineers (the core C++ systems)
+- 4 gameplay engineers
+- 2 graphics / tools engineers
+- 1 producer
+- No dedicated console/platform specialist yet
 
-## Infrastructure Budget
-- Current spend: ~€280/month
-- Approved budget for new features: up to €1,200/month additional
+## Hard Constraints
+- No feature freeze: the live title keeps shipping monthly content through any refactor.
+- Incremental migration only: a multi-month big-bang rewrite is off the table.
+- First console port is due in ~12 months, a fixed publisher commitment.
 
 ## Known Pain Points (Business Impact)
 
-1. **No real-time collaboration** — Writers cannot co-author an article simultaneously.
-   Co-authors must pass a Google Doc back and forth, then paste the final version.
-   Several power users have complained this is the #1 missing feature.
+1. **The entity hierarchy is slowing everyone down.** Adding a new kind of object means
+   editing a shared base class, and a few diamond-inheritance knots have already appeared.
+   New behaviour lands slower every quarter.
 
-2. **No draft auto-save** — If a writer closes the tab, their draft is lost.
-   Support tickets about lost work: ~30/month.
+2. **Cache misses in the update loop.** Object data is scattered across the class tree,
+   so iterating thousands of entities thrashes the cache. Big scenes drop frames.
 
-3. **Feed latency at peak** — The personalised article feed re-queries PostgreSQL
-   on every page load. p95 latency hits 1.8 s on weekday mornings.
+3. **Locked to one graphics API.** There is an `IVideoDriver` interface, but the only backend
+   ever written is `VideoDriverGLES20`, and both the interface and `STDRenderer` assume GLES2.
+   Finishing that seam is the precondition for any second API or new platform.
 
-4. **No media storage** — Articles cannot embed images hosted by Conduit.
-   Writers must paste external URLs, which rot over time.
+4. **The renderer uses one core.** Immediate-mode submission on the main thread leaves
+   the other cores idle. The frame budget is tight on weaker target hardware.
 
-5. **Auth session length** — JWT access tokens never expire.
-   Security team flagged this; any leaked token is valid forever.
+5. **Designers wait on engineers.** Behaviour changes need a C++ edit and a recompile,
+   and a full rebuild is ~22 min. Iteration is painful.
 
-6. **Tag search is a full-table scan** — No index on tags.
-   As the tag table grows the search endpoint degrades linearly.
+6. **The port can't be scoped.** Because GL is everywhere, nobody can give the publisher
+   an honest estimate for the console port. That is now a business risk.
 
 ## Timeline
-- Premium tier (paid subscriptions) launch: Q3 — hard deadline, marketing committed.
-- Real-time collaboration MVP: Q4 goal, team lead is pushing hard.
-- Image hosting: backlog, no firm date.
+- Engine modernization decision: now, before the second title's vertical slice.
+- Second title vertical slice: ~6 months.
+- First console port: ~12 months, hard publisher deadline.

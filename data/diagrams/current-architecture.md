@@ -1,3 +1,12 @@
+# Current Architecture (Oxygine engine)
+
+Detailed view of the current engine. The three highlighted zones are what the workshop's three features would change; everything else stays as is.
+
+- 🟢 **green** = entity model the ECS migration replaces (Sofia / ADR-001)
+- 🔵 **blue** = render seam the RHI abstraction reshapes (Tariq / ADR-002)
+- 🟠 **orange** = single-thread + immediate-mode submission the multithreading targets (Yuki / ADR-003)
+
+```mermaid
 graph TD
     subgraph Legend["Workshop zones"]
         direction TB
@@ -46,3 +55,4 @@ graph TD
     class Driver,Backend,L2 rhi;
     class STD,L3 thread;
     style Loop stroke:#e65100,stroke-width:2px,stroke-dasharray:5 3;
+```
