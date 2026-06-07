@@ -20,7 +20,7 @@ Founded in 2019, PC-first, now being pushed toward console and mobile.
 - The engine team cannot pause live-ops to do it
 
 ## Current Technology Stack
-- Engine: in-house C++17 engine ("Oxygine"), maintained since 2019
+- Engine: in-house C++11 engine ("Oxygine"), maintained since 2019
 - Entities: OOP inheritance on the engine's `Actor` base class, deep subclass trees (`Actor` → `VStyleActor` → `Sprite`), with our `Player` / `Enemy` / `Pickup` types layered on top
 - Rendering: OpenGL ES only, behind a single-backend `IVideoDriver` interface (`VideoDriverGLES20`); `STDRenderer` submits draw calls immediate-mode
 - Threading: a single update/render thread, immediate-mode draw submission

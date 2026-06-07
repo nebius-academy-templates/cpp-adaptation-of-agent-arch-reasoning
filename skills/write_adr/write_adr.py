@@ -8,7 +8,7 @@ Usage:
     python skills/write_adr/write_adr.py <adr-id> <title> <content-file>
 
 Example:
-    python skills/write_adr/write_adr.py ADR-004 "Message Queue Selection" /tmp/adr_draft.md
+    python skills/write_adr/write_adr.py ADR-004 "Render Backend Abstraction" /tmp/adr_draft.md
 
 The script:
   1. Reads the Markdown content from <content-file>.

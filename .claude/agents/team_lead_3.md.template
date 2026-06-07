@@ -38,7 +38,7 @@ You want to use more than one core for the frame. Concretely:
 
 ### The team and stack
 - 3 engine engineers, 4 gameplay engineers, 2 graphics/tools engineers, 1 producer.
-- The engine is C++17, single update/render thread, immediate-mode GL submission.
+- The engine is C++11, single update/render thread, immediate-mode GL submission.
 - Nobody here has shipped a multithreaded renderer or a job system before.
 - Gameplay code reads and writes shared world state during the frame.
 

@@ -2,7 +2,7 @@
 
 In this practice you will build agents from scratch: an engineering team lead chatbot, an architecture reasoning orchestrator, and an RFC writer subagent. The tools and data are provided, your job is to write the agent instructions.
 
-The target codebase is **Northwind Studios' in-house C++ engine** (`engine/`, the open-source **Oxygine** framework, added as a git submodule), a C++17 game engine with an `Actor` OOP entity hierarchy, OpenGL ES rendering behind a single-backend `IVideoDriver` seam (`VideoDriverGLES20`), and a single update/render thread.
+The target codebase is **Northwind Studios' in-house C++ engine** (`engine/`, the open-source **Oxygine** framework, added as a git submodule), a C++11 game engine with an `Actor` OOP entity hierarchy, OpenGL ES rendering behind a single-backend `IVideoDriver` seam (`VideoDriverGLES20`), and a single update/render thread.
 
 Three team lead personas are provided, each requests a different engine-modernization feature. Pick one to start:
 

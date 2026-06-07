@@ -26,7 +26,7 @@ graph TD
     end
 
     subgraph Entities["Entities: one deep inheritance tree"]
-        Tree["Everything is an Actor<br>Object → Actor → VStyleActor → Sprite<br>UI: Button, TextField · game: Player, Enemy, Pickup"]
+        Tree["Everything is an Actor<br>Object → EventDispatcher → Actor → VStyleActor → Sprite<br>UI: Button, TextField · game: Player, Enemy, Pickup"]
     end
 
     subgraph RenderStack["Drawing path (immediate-mode)"]
@@ -34,10 +34,12 @@ graph TD
         Delegate["RenderDelegate (STDRenderDelegate)"]
         STD["STDRenderer<br>submits draw calls right away"]
         Driver["IVideoDriver<br>the render interface, shaped for GLES2"]
+        GLBase["VideoDriverGL<br>shared GL backend base"]
         Backend["VideoDriverGLES20<br>the only real backend (plus a null stub)"]
         Delegate --> STD
         STD --> Driver
-        Driver --> Backend
+        Driver --> GLBase
+        GLBase --> Backend
     end
 
     Update --> Tree
@@ -52,7 +54,7 @@ graph TD
     classDef thread fill:#fdeccd,stroke:#e65100,stroke-width:3px;
 
     class Tree,Update,L1 ecs;
-    class Driver,Backend,L2 rhi;
+    class Driver,GLBase,Backend,L2 rhi;
     class STD,L3 thread;
     style Loop stroke:#e65100,stroke-width:2px,stroke-dasharray:5 3;
 ```
