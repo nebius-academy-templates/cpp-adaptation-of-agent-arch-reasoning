@@ -87,7 +87,7 @@ Read `data/context/company.md` to understand the scenario, then browse `engine/o
 
 ---
 
-## Step 1: Build a Team Lead chatbot
+## Step 1: Talk to your Team Lead
 
 Three personas are available. Pick one (or build all three for extra practice).
 
