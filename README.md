@@ -1,8 +1,19 @@
 # Practice: Building an Architecture Reasoning Agent
 
-In this practice you will build agents from scratch: an engineering team lead chatbot, an architecture reasoning orchestrator, and an RFC writer subagent. The tools and data are provided, your job is to write the agent instructions.
+To get a head start, please clone the workshop repository before the session.
+
+In this practice, you’ll work through the full architecture reasoning workflow:
+
+- Gather and formalize requirements from a teamlead chatbot
+- Evaluate an existing architecture against those requirements
+- Design an agent that identifies gaps and proposes improvements
+- Generate an architecture diagram using Mermaid and MCP
+- Create a specialized subagent to write a structured RFC
+- Compare the output of the main agent and the subagent.
 
 The target codebase is **Northwind Studios' in-house C++ engine** (`engine/`, the open-source **Oxygine** framework, added as a git submodule), a C++11 game engine with an `Actor` OOP entity hierarchy, OpenGL ES rendering behind a single-backend `IVideoDriver` seam (`VideoDriverGLES20`), and a single update/render thread.
+
+------------------------ ⚠️ **Spoiler alert! Continue only during the workshop or while working independently after it** -------------------------------
 
 Three team lead personas are provided, each requests a different engine-modernization feature. Pick one to start:
 
