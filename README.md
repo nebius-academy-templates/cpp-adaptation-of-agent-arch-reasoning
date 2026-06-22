@@ -89,7 +89,7 @@ Read `data/context/company.md` to understand the scenario, then browse `engine/o
 
 ## Step 1: Talk to your Team Lead
 
-Three personas are available. Pick one (or build all three for extra practice).
+Three personas are available. Pick one (or talk to all three for extra practice).
 
 | Persona | Feature | Templates to copy |
 |---------|---------|-------------------|
@@ -97,9 +97,7 @@ Three personas are available. Pick one (or build all three for extra practice).
 | Tariq Hassan | Render-backend abstraction | `team-lead-2/CLAUDE.md.template` → `team-lead-2/CLAUDE.md`<br>`.claude/agents/team_lead_2.md.template` → `.claude/agents/team_lead_2.md` |
 | Yuki Sato | Multithreaded renderer | `team-lead-3/CLAUDE.md.template` → `team-lead-3/CLAUDE.md`<br>`.claude/agents/team_lead_3.md.template` → `.claude/agents/team_lead_3.md` |
 
-Each persona already has content filled in, the templates are complete, not blank. Read them, then optionally customise before running.
-
-Test the standalone chatbot for your chosen persona:
+Test the chatbot for your chosen persona:
 
 ```bash
 cd team-lead        # or team-lead-2 / team-lead-3
