@@ -13,6 +13,8 @@ In this practice, you’ll work through the full architecture reasoning workflow
 
 The target codebase is **Northwind Studios' in-house C++ engine** (`engine/`, the open-source **Oxygine** framework, added as a git submodule), a C++11 game engine with an `Actor` OOP entity hierarchy, OpenGL ES rendering behind a single-backend `IVideoDriver` seam (`VideoDriverGLES20`), and a single update/render thread.
 
+**You’ll work with a C++ engine during this workshop, but you don’t need to install it separately: everything is already included and adapted in the repository.**
+
 ------------⚠️ **Spoiler alert! Continue only during the workshop or while working independently after it.** -----------
 
 
